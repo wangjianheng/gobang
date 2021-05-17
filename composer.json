@@ -1,9 +1,8 @@
 {
     "require": {
-        "illuminate/container": "@dev",
-        "illuminate/support": "@dev",
-        "illuminate/filesystem": "@dev",
-        "illuminate/config": "@dev",
-        "illuminate/database": "@dev"
+        "illuminate/container": "^5.8",
+        "illuminate/database": "^5.8",
+        "illuminate/support": "^5.8",
+        "illuminate/pipeline": "^5.8"
     }
 }
