@@ -3,18 +3,14 @@ namespace carpet;
 use \tool\chessboard;
 use Illuminate\Support\Arr;
 
-/**
- * 相连棋子
- */
-class link {
-    
+class link {    
     //头
     protected $linkHead;
     
     //尾
     protected $linkEnd;
      
-    //斜率 只有三种 横:0 竖:false 斜线:1
+    //斜率 只有四种 横:0 竖:false 斜线:1, -1
     protected $gradient = null;
     
     //元素
@@ -28,7 +24,7 @@ class link {
     /**
      * 连入新的点
      * @param array $point 点
-     * @return bool 连入成功true 不可连入false
+     * @return mixed 连入成功返回$this 不可连入false
      */
     public function link($point) {
         if (in_array($point, $this->elements)) {
@@ -44,7 +40,7 @@ class link {
             if ($this->gradient === chessboard::celGradient($point, $this->linkHead)) {
                 array_unshift($this->elements, $point);
                 $this->linkHead = $point;
-                return true;
+                return $this;
             }
         }
         
@@ -53,7 +49,7 @@ class link {
             if ($this->gradient === chessboard::celGradient($point, $this->linkEnd)) {
                 array_push($this->elements, $point);
                 $this->linkEnd = $point;
-                return true;
+                return $this;
             }
         }
         
@@ -64,7 +60,7 @@ class link {
      * 当目前只有一个元素的时候用这个方法
      * 只有一个元素 挨着就可以连 并且需要确定下斜率
      * @param array $point
-     * @return bool 连入成功true 不可连入false
+     * @return mixed 连入成功返回$this 不可连入false
      */
     protected function linkOnePoint($point) {
         //头和尾是同一个点 用哪个都可以
@@ -75,7 +71,7 @@ class link {
         array_push($this->elements, $point);
         $this->linkEnd = $point;
         $this->gradient = chessboard::celGradient($this->linkEnd, $this->linkHead);
-        return true;
+        return $this;
     }
     
     /**

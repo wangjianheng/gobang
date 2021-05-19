@@ -4,6 +4,7 @@ require 'vendor/autoload.php';
 use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Connectors\ConnectionFactory;
 use carpet\chessMapsBuilder;
 
 define('STONE_BLACK', 1);
@@ -12,23 +13,12 @@ define('WHITE_PRUINGS', 'white_pruings');
 define('BLACK_PRUINGS', 'black_pruings');
 define('CHESSBOARD_SIZE', 15);
 
-/**
- * 自定义类的加载
- */
-spl_autoload_register(function($class) {
-    $file = __DIR__ . '/' . str_replace('\\', '/', $class) . '.php';
-    if (! file_exists($file)) {
-        exit("class $class not fonund");
-    }
-    require_once $file;
-});
-
 //调试
 $degug = false;
 
 //容器
 $app = new Container();
-
+$app->instance(Container::class, $app);
 //配置加载
 $env = array_merge(parse_ini_file('.env', true), [
     'database.default' => null,
@@ -36,7 +26,9 @@ $env = array_merge(parse_ini_file('.env', true), [
 $app->instance('config', $env);
 
 //数据源
-$resolver = $app->make(DatabaseManager::class, ['app' => $app]);
+$connectionFactory = $app->make(ConnectionFactory::class, ['container' => $app]);
+$resolver = $app->make(DatabaseManager::class, ['app' => $app, 'factory' => $connectionFactory]);
+
 Model::setConnectionResolver($resolver);
 
 //白棋剪枝策略

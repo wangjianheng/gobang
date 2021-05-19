@@ -78,5 +78,105 @@ class arrayUtil {
         return $default;
     }
     
+    /**
+     * 支持元素为数组的判断
+     * @param mixed $item
+     * @param array $array
+     * @return bool
+     */
+    public static function inArray($item, $array) {
+        $array = array_filter($array, function ($val) use ($item) {
+            return self::compareArray($val, $item);
+        });
+        return ! empty($array);
+    }
+    
+    /**
+     * 对比两个数组是否相等
+     * @param array $array1
+     * @param array $array2
+     * @return bool
+     */
+    public static function compareArray($array1, $array2) {
+        $keys = array_intersect(array_keys($array1), array_keys($array2));
+        if (count($keys) !== count($array1) || count($keys) !== count($array2)) {
+            return false;
+        }
+        
+        foreach ($keys as $k) {
+            if (is_array($array1[$k]) && is_array($array2[$k])) {
+                $same = self::compareArray($array1[$k], $array2[$k]);
+            } else if (! is_array ($array1[$k]) && ! is_array($array2[$k])) {
+                $same = $array1[$k] == $array2[$k];
+            } else {
+                $same = false;
+            }
+            
+            if (! $same) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * 构建管道
+     * @param array $pipes 实例数组
+     * @param string $func 调用的方法
+     * @param callable $break 自定义中断
+     * @return callable
+     */
+    public static function buildPipeline($pipes, $func, $break = null) {
+        //将剪枝的类转为方法
+        $pipes = array_map(function ($pruning) use ($func, $break) {
+            return function ($passable, $next) use ($pruning, $func, $break) {
+                $dealRes = call_user_func_array([$pruning, $func], $passable);
+                
+                //定义中断
+                if (is_callable($break) && $break($dealRes, $pruning, $passable)) {
+                    return $dealRes;
+                }
+                
+                return $next($passable);
+            };
+        }, $pipes);
+        
+        //构建管道
+        return array_reduce(array_reverse($pipes), function ($stack, $pipe) {
+            return function ($passable) use ($stack, $pipe) {
+                return $pipe($passable, $stack);
+            };
+        }, 'value');
+    }
+    
+    /**
+     * 笛卡尔乘积
+     * @param array $arrays
+     * @return array
+     */
+    public static function arrayCross(...$arrays) {
+        $mixed = [];
+        $count = count($arrays);
+        
+        if ($count < 2) {
+            return current($arrays);
+        } else if ($count == 2) {
+            foreach (current($arrays) as $v1) {
+                foreach (end($arrays) as $v2) {
+                    array_push($mixed, [$v1, $v2]);
+                }
+            }
+        } else {
+            foreach (array_shift($arrays) as $v1) {
+                foreach (self::arrayCross(...$arrays) as $v2) {
+                    array_unshift($v2, $v1);
+                    array_push($mixed, $v2);
+                }
+            }
+        }
+        return $mixed;
+    }
+    
     
 }

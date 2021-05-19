@@ -1,8 +1,10 @@
 <?php
 namespace carpet;
 use carpet\chessMap;
+use carpet\point;
 use model\carpet;
 use tool\chessboard;
+use tool\arrayUtil;
 
 /**
  * 构建地毯谱, 用广度优先
@@ -38,68 +40,49 @@ class chessMapsBuilder {
              */
             $whiteChooise = chessboard::nextSteps($map->getChessMap());
             
-            $whiteChooise = array_filter($whiteChooise, function ($position) use ($map) {
-                return $this->through(app(WHITE_PRUINGS), [
+            array_walk($whiteChooise, function (& $position) use ($map) {
+                $position = app(point::class, ['position' => $position]);
+                $position = $this->through(app(WHITE_PRUINGS), [
                     $map,
                     $position,
                     STONE_WHITE,
                 ]);
             });
+            
+            print_r($whiteChooise);die;
         }
     }
     
     /**
      * 落点通过剪枝策略
-     * @param string $pipe 队列
+     * @param string $pipes 实例数组
      * @param array $params 入参
      * @return bool
      */
     public function through($pipes, $params) {
-        //排序 优先级:一票否决>一票通过>其他
+        //按优先级排序
         usort($pipes, function ($pruning1, $pruning2) {
-            $compore = (int)$pruning2->oneVoteVeto() - (int)$pruning1->oneVoteVeto();
-            
-            if ($compore !== 0) {
-                return $compore;
-            }
-            
-            return (int)$pruning2->oneVotePass() - (int)$pruning1->oneVotePass();
+            return (int)$pruning2->getPriority() - (int)$pruning1->getPriority();
         });
         
         //通过管道
-        return call_user_func_array($this->buildPipeline($pipes), [$params]);
+        return call_user_func_array(arrayUtil::buildPipeline($pipes, 'check', function ($dealRes, $pruning, & $passable) {
+            list($res, $priority) = $dealRes->getCheckRespond();
+            
+            //判定为false打断并返回
+            if ($res === false) {
+                return true;
+            }
+            
+            /**
+             * 把入参的position替换一下(坐标肯定不会变)
+             * 为了将上一个节点的信息带入到下一个节点(优先级, 判断结果等)
+             */
+            $passable[1] = $dealRes;
+            return false;
+        }), [$params]);
     }
     
-    /**
-     * 构建管道
-     * @param array $pipes
-     * @return callable
-     */
-    protected function buildPipeline($pipes) {
-        //将剪枝的类转为方法
-        $pipes = array_map(function ($pruning) {
-            return function ($passable, $next) use ($pruning) {
-                $checkRes = call_user_func_array([$pruning, 'check'], $passable);
-                
-                //一票通过
-                if ($checkRes && $pruning->oneVotePass()) {
-                    return true;
-                }
-                
-                //继续下面的判断
-                return $next($passable);
-            };
-        }, $pipes);
-        
-        //构建管道
-        return array_reduce(array_reverse($pipes), function ($stack, $pipe) {
-            return function ($passable) use ($stack, $pipe) {
-                return $pipe($passable, $stack);
-            };
-        });
-        
-        
-    }
 
     /**
      * 通过数据库实现出队列

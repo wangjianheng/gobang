@@ -4,12 +4,14 @@ namespace carpet;
 use model\carpet;
 use tool\arrayUtil;
 use tool\chessboard;
-use \Illuminate\Support\Arr;
+use traits\resCache;
 
 /* 
  * 棋谱
  */
 class chessMap {
+    
+    use resCache;
     
     //落子位置
     protected $stonePosion;
@@ -53,13 +55,12 @@ class chessMap {
     /*
      * 统计所有相连组合 
      * 同一棋谱 可能会调的比较频繁 加一个缓存  
+     * @param int $color 棋色
      * @param int $length 长度
-     * @param int $color 哪种棋色
      * @return array
      */
-    protected function getLinks($length, $color) {
-        static $cache = [], $sign = null;
-        if ($sign !== $this->sign || ! isset($cache[$color])) {
+    public function getLinks($color, $length = null) {
+        $links = self::cacheGet($this->sign, function () use ($color) {
             $chessMap = arrayUtil::flatten($this->chessMap);
             $chessmen = array_filter($chessMap, function ($chessColor) use ($color) {
                 return $chessColor == $color;
@@ -68,11 +69,14 @@ class chessMap {
             $chessmenPosition = array_map(function ($position) {
                 return explode('.', $position);
             }, array_keys($chessmen));
-            $cache[$color] = $this->getAllLinks($chessmenPosition);
-            $sign = $this->sign;
+            return $this->getAllLinks($chessmenPosition);
+        });
+        
+        if (is_null($length)) {
+            return $links;
         }
         
-        return array_filter($cache[$color], function ($link) use ($length) {
+        return array_filter($links, function ($link) use ($length) {
             return $link->length() == $length;
         });
     }
@@ -82,7 +86,7 @@ class chessMap {
      * @param array $chessmen 所有棋子位置
      */
     protected function getAllLinks($chessmen) {
-        $chessmen = [[7, 7], [7, 8], [7, 9], [6, 6], [5, 5], [8, 8]];
+        $chessmen = [[7, 7], [7, 8], [7, 9], [6, 6], [5, 5], [10, 3], [10, 4], [10, 6]];
         //每个点都看作是一条链
         $allLinks = collect($chessmen)
                 ->map(function ($point) {
@@ -93,10 +97,10 @@ class chessMap {
         do {
             $allLinks = $allLinks->map(function ($link) use (& $ret, $chessmen) {
                 //标识是否连入过点
-                $linked = 0;
+                $linked = false;
                 
                 foreach ($chessmen as $point) {
-                    $linked |= (int)$link->link($point);
+                    $linked = $linked || $link->link($point);
                 }
                 
                 /**
@@ -117,39 +121,26 @@ class chessMap {
     }
 
     /**
-     * 活三
+     * 长度为$len并且头尾皆活头尾
      * @param int $color 棋色
-     * @param bool strict 严格版:头尾延申两步亦可落子
      * @return array
      */
-    public function doubleFreeLink3($color, $strict = false) {
-        //所有长度为3的链接
-        $allLinks = $this->getLinks(3, $color);
+    public function doubleFreeLinkN($color, $len) {
+        //所有长度为$len的链接
+        $allLinks = $this->getLinks($color, $len);
         
         //头活且尾活
-        return array_filter($allLinks, function ($link) use ($strict, $color) {
+        return array_filter($allLinks, function ($link) use ($color) {
             $prevAndNext = array_filter([$link->prev(), $link->next()]);
             if (count($prevAndNext) < 2) {
                 return false;
             }
             
-            //再延申一次
-            if($strict) {
-                $linkClone = clone $link;
-                array_walk($prevAndNext, [$linkClone, 'link']);
-                array_push($prevAndNext, $linkClone->prev(), $linkClone->next());
-                $prevAndNext = array_filter($prevAndNext);
-                if (count($prevAndNext) < 4) {
-                    return false;
-                }
-            }
-            
-            //所有延申点均未落对方子(为空或落己方子都可以)
+            //所有延申点均未落对方子
             $prevAndNextExists = array_map([$this, 'get'], $prevAndNext);
             return empty(array_filter($prevAndNextExists, function ($existColor) use ($color) {
                 return $existColor && $existColor !== chessboard::negateColor($color);
-            }));
-            
+            }));   
         });
     }
     
@@ -160,7 +151,7 @@ class chessMap {
      */
     public function singleFreeLink4($color) {
         //所有长度为4的链接
-        $allLinks = $this->getLinks(4, $color);
+        $allLinks = $this->getLinks($color, 4);
         
         //头活或尾活
         return array_filter($allLinks, function ($link) {
@@ -192,6 +183,13 @@ class chessMap {
      */
     public function get($position) {
         return $this->chessMap[$position[0]][$position[1]] ?? null;
+    }
+    
+    /**
+     * 获取签名
+     */
+    public function getSign() {
+        return $this->sign;
     }
     
     

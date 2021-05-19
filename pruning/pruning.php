@@ -1,6 +1,7 @@
 <?php
 namespace pruning;
 
+use carpet\point;
 interface pruning {
     
     /**
@@ -8,13 +9,7 @@ interface pruning {
      * @param array $map 棋盘所有落子
      * @param array $position 检验落子位
      * @param int $color 落子方
-     * @return bool
+     * @return point
      */
-    public function check($map, $position, $color);
-    
-    /**
-     * 一票通过权 即不需考虑其他策略的决定, 直接通过
-     * @return bool
-     */    
-    public function oneVotePass();
+    public function check($map, $position, $color) : point;
 }
