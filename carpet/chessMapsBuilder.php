@@ -39,20 +39,51 @@ class chessMapsBuilder {
              * 经过筛选统计剩下的落子点
              */
             $whiteChooise = chessboard::nextSteps($map->getChessMap());
+            $whiteChooise = $this->chooiseFilter($map, $whiteChooise, STONE_WHITE);
             
-            array_walk($whiteChooise, function (& $position) use ($map) {
-                $position = app(point::class, ['position' => $position]);
-                $position = $this->through(app(WHITE_PRUINGS), [
-                    $map,
-                    $position,
-                    STONE_WHITE,
-                ]);
-            });
             
-            print_r($whiteChooise);die;
+            /**
+             * 下一手黑棋出, 统计所有黑棋可能落点并落库
+             */
+            foreach ($whiteChooise as $point) {
+                $mapWithWhite = (clone $map)->set($point, STONE_WHITE);
+                $blackChooise = chessboard::nextSteps($mapWithWhite->getChessMap());
+                $blackChooise = $this->chooiseFilter($mapWithWhite, $blackChooise, STONE_BLACK);
+                die;
+                print_r($blackChooise);die;
+            }
         }
     }
     
+    /**
+     * 对可落点进行过滤
+     * @param chessMap $map 棋谱
+     * @param array $chooise 所有可落点
+     * @param int $color 落子方
+     * @return array
+     */
+    protected function chooiseFilter($map, $chooise, $color) {
+        $policyMap = [
+            STONE_WHITE => WHITE_PRUINGS,
+            STONE_BLACK => BLACK_PRUINGS,
+        ];
+        $policy = $policyMap[$color];
+        
+        foreach ($chooise as & $point) {
+            $point = app(point::class, ['position' => $point]);
+            $point = $this->through(app($policy), [$map, $point, $color]);
+        }
+        
+        //选优先级最高的点
+        $chooiseFilter = [];
+        foreach ($chooise as $point) {
+            list($res, $priority) = $point->getCheckRespond();
+            $res && $chooiseFilter[$priority][] = $point->position();
+        }
+        ksort($chooiseFilter);
+        return array_pop($chooiseFilter);
+    }
+
     /**
      * 落点通过剪枝策略
      * @param string $pipes 实例数组
@@ -66,20 +97,10 @@ class chessMapsBuilder {
         });
         
         //通过管道
-        return call_user_func_array(arrayUtil::buildPipeline($pipes, 'check', function ($dealRes, $pruning, & $passable) {
-            list($res, $priority) = $dealRes->getCheckRespond();
-            
-            //判定为false打断并返回
-            if ($res === false) {
-                return true;
-            }
-            
-            /**
-             * 把入参的position替换一下(坐标肯定不会变)
-             * 为了将上一个节点的信息带入到下一个节点(优先级, 判断结果等)
-             */
-            $passable[1] = $dealRes;
-            return false;
+        return call_user_func_array(arrayUtil::buildPipeline($pipes, 'check', function ($res) {
+            $point = $res[1];
+            list($res, $priority) = $point->getCheckRespond();
+            return is_null($res) ? $point->checkRespond(true, 0) : $point;
         }), [$params]);
     }
     

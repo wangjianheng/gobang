@@ -2,11 +2,11 @@
 namespace pruning;
 
 /**
- * 活四判断
+ * 连5子判断
  */
-class preventLink4 extends base implements pruning {
+class preventLink5 extends base implements pruning {
 
-    protected $priority = 80;
+    protected $priority = 100;
     
     /**
      * 校验当前落子是否通过
@@ -16,7 +16,7 @@ class preventLink4 extends base implements pruning {
      * @return bool 是否可落子
      */
     public function doCheck($map, $point, $color) {
-        $links = $map->set($point->position(), $color)->doubleFreeLinkN($color, 4);
+        $links = $map->set($point->position(), $color)->getLinks($color, 5);
         foreach ($links as $link) {
             if (arrayUtil::inArray($point->position(), $link->getElements())) {
                 return true;

@@ -86,7 +86,6 @@ class chessMap {
      * @param array $chessmen 所有棋子位置
      */
     protected function getAllLinks($chessmen) {
-        $chessmen = [[7, 7], [7, 8], [7, 9], [6, 6], [5, 5], [10, 3], [10, 4], [10, 6]];
         //每个点都看作是一条链
         $allLinks = collect($chessmen)
                 ->map(function ($point) {
@@ -177,7 +176,7 @@ class chessMap {
         
     }
 
-        /**
+    /**
      * 获取棋盘某一个位置的棋子颜色
      * @param array $position 位置
      */
@@ -185,7 +184,17 @@ class chessMap {
         return $this->chessMap[$position[0]][$position[1]] ?? null;
     }
     
-    /**
+    public function set($position, $color) {
+        if ($this->get($position)) {
+            return false;
+        }
+        
+        $this->chessMap[$position[0]][$position[1]] = $color;
+        $this->sign = sha1(json_encode($this->chessMap));
+        return $this;
+    }
+
+        /**
      * 获取签名
      */
     public function getSign() {

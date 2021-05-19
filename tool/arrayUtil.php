@@ -124,21 +124,14 @@ class arrayUtil {
      * 构建管道
      * @param array $pipes 实例数组
      * @param string $func 调用的方法
-     * @param callable $break 自定义中断
+     * @param callable $then 最后通过的方法
      * @return callable
      */
-    public static function buildPipeline($pipes, $func, $break = null) {
+    public static function buildPipeline($pipes, $func, $then = 'value') {
         //将剪枝的类转为方法
-        $pipes = array_map(function ($pruning) use ($func, $break) {
-            return function ($passable, $next) use ($pruning, $func, $break) {
-                $dealRes = call_user_func_array([$pruning, $func], $passable);
-                
-                //定义中断
-                if (is_callable($break) && $break($dealRes, $pruning, $passable)) {
-                    return $dealRes;
-                }
-                
-                return $next($passable);
+        $pipes = array_map(function ($pruning) use ($func) {
+            return function ($passable, $next) use ($pruning, $func) {
+                return call_user_func_array([$pruning, $func], [$passable, $next]);
             };
         }, $pipes);
         
@@ -147,7 +140,7 @@ class arrayUtil {
             return function ($passable) use ($stack, $pipe) {
                 return $pipe($passable, $stack);
             };
-        }, 'value');
+        }, $then);
     }
     
     /**
@@ -156,25 +149,24 @@ class arrayUtil {
      * @return array
      */
     public static function arrayCross(...$arrays) {
-        $mixed = [];
-        $count = count($arrays);
-        
-        if ($count < 2) {
+        if (count($arrays) < 2) {
             return current($arrays);
-        } else if ($count == 2) {
-            foreach (current($arrays) as $v1) {
-                foreach (end($arrays) as $v2) {
-                    array_push($mixed, [$v1, $v2]);
-                }
-            }
-        } else {
-            foreach (array_shift($arrays) as $v1) {
-                foreach (self::arrayCross(...$arrays) as $v2) {
-                    array_unshift($v2, $v1);
-                    array_push($mixed, $v2);
-                }
-            }
         }
+        
+        $mixed = array_map(function($item) {
+            return [$item];
+        }, array_shift($arrays));
+        
+        while ($arrays) {
+            $tmp = [];
+            foreach (array_shift($arrays) as $v1) {
+                foreach ($mixed as $v2) {
+                    array_push($tmp, array_merge($v2, [$v1]));
+                }
+            }
+            $mixed = $tmp;
+        }
+        
         return $mixed;
     }
     

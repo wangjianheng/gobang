@@ -4,6 +4,7 @@ namespace pruning;
 use traits\resCache;
 use carpet\point;
 use tool\arrayUtil;
+use tool\chessboard;
 
 abstract class base {
     
@@ -18,25 +19,42 @@ abstract class base {
      */
     protected $priority = 0;
     
-    public function __construct() {
+    protected $reverse = false;
+
+    /**
+     * @param int $reverse 颜色是否反转:分析自己还是分析对方
+     * @param int $priorityAdjust 优先级调整
+     */
+    public function __construct($reverse = false, $priorityAdjust = 0) {
         static::$highestPriority = 0;
+        $this->reverse = $reverse;
+        $this->priority += $priorityAdjust;
     }
 
     /**
      * 校验当前落子是否通过
-     * @param array $map 棋盘所有落子
-     * @param array $position 检验落子位
-     * @param int $color 落子方
-     * @return bool 是否可落子
+     * @param array $params   入参,含以下
+     *         carpet\chessMap 棋盘所有落子
+     *         carpet\point    检验落子位
+     *         int             落子方
+     * @param callable $next  下一个校验节点
+     * @return point
      */
-    public function check($map, $position, $color) : point {
+    public function check($params, $next) : point {
+        list($map, $point, $color) = $params;
         //没有权限校验 直接返回
-        if (! $this->accessCheck(...$position->getCheckRespond())) {
-            return $position;
+        if (! $this->accessCheck(...$point->getCheckRespond())) {
+            return $point;
         }
         
-        $res = $this->doCheck($map, $position, $color);
-        return $position->checkRespond($res, $this->priority);
+        $res = $this->doCheck(clone $map, $point, $this->getColor($color));
+        $point = $point->checkRespond($res, $this->priority);
+        
+        /*
+         * 如果校验不通过直接返回false
+         * 没有结果或校验通过 继续让后面的节点校验
+         */
+        return $res === false ? $point : $next([$map, $point, $color]);
     }
     
     /*
@@ -47,7 +65,6 @@ abstract class base {
      * 
      * (2)若高优先级节点未给出结论, 则低优先级可以继续判断 同等级之间都有一票否决权,
      *    由于已经按照优先级排好序 如果其中一个节点返回false 即可定义结果为false 
-     *    这点所有实现放在了构建管道的时候
      * 
      * @param bool $res 上一个节点的判断逻辑
      * @param int $priority 上一个节点的优先级
@@ -73,27 +90,7 @@ abstract class base {
      * 执行校验
      * @return bool
      */
-    abstract public function doCheck($map, $position, $color);
-
-    /**
-     * 限制范围型会计算出一个范围
-     * 如果存在范围, 则只过范围内的点 并一票通过
-     * 如果不存在范围 则继续其他剪枝逻辑的判断 并取消一票通过
-     * @param array $position 落子点
-     * @param array $range 范围
-     */
-    protected function inRange($position, $range) {
-        /**
-         * 一票通过这直接修改就好
-         * 下一个棋谱会被重新实例化 不用担心影响后面棋谱的判断
-         */
-        if (empty($range)) {
-            $this->oneVotePass = false;
-            return true;
-        }
-        
-        return arrayUtil::inArray($position, $range);
-    }
+    abstract public function doCheck($map, $point, $color);
     
     /**
      * 获取优先级
@@ -101,6 +98,14 @@ abstract class base {
      */
     public function getPriority() {
         return $this->priority;
+    }
+    
+    /**
+     * 获取分析棋色
+     * @param int $color 落子颜色
+     */
+    public function getColor($color) {
+        return $this->reverse ? chessboard::negateColor($color) : $color;  
     }
     
 }
