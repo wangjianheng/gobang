@@ -24,7 +24,7 @@ class chessMapsBuilder {
     //黑棋先手走天元
     public function __construct() {
         $middle = intval(CHESSBOARD_SIZE / 2);
-        //$this->point = (new chessMap([], [$middle, $middle]))->save();
+        //(new chessMap([], [$middle, $middle]))->save();
         
         $this->carpetModel = new carpet();
     }
@@ -40,7 +40,6 @@ class chessMapsBuilder {
              */
             $whiteChooise = chessboard::nextSteps($map->getChessMap());
             $whiteChooise = $this->chooiseFilter($map, $whiteChooise, STONE_WHITE);
-            
             
             /**
              * 下一手黑棋出, 统计所有黑棋可能落点并落库

@@ -22,12 +22,15 @@ class chessMap {
     //签名 用于棋谱对比
     protected $sign;
 
+    protected $root;
+
     protected $carpetModel;
 
-    public function __construct($chessMap, $stonePosion = null) {
+    public function __construct($chessMap, $stonePosion = null, $root = 0) {
         $this->chessMap = $chessMap;
         $this->stonePosion = $stonePosion;
         $this->sign = sha1(json_encode($chessMap));
+        $this->root = $root;
         
         $this->carpetModel = new carpet();
     }
