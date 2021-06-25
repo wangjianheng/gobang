@@ -13,9 +13,6 @@ class chessMap {
     
     use resCache;
     
-    //落子位置
-    protected $stonePosion;
-    
     //棋子分布
     protected $chessMap;
     
@@ -26,9 +23,8 @@ class chessMap {
 
     protected $carpetModel;
 
-    public function __construct($chessMap, $stonePosion = null, $root = 0) {
+    public function __construct($chessMap, $root = 0) {
         $this->chessMap = $chessMap;
-        $this->stonePosion = $stonePosion;
         $this->sign = sha1(json_encode($chessMap));
         $this->root = $root;
         
@@ -37,20 +33,34 @@ class chessMap {
     
     /**
      * 获取分布
+     * @param int $color 获取哪种颜色的棋子 null全要
+     * @param boolean $flatten 是否铺平
+     * @return array
      */
-    public function getChessMap() {
-        return $this->chessMap;
+    public function getChessMap($color = null, $flatten = false) {
+        if (is_null($color)) {
+            return $this->chessMap;
+        }
+
+        return self::cacheGet($this->sign . (int)$flatten, function () use ($color, $flatten) {
+            $ret = array_filter($this->chessMap, function ($item) use ($color) {
+                return current($item) == $color;
+            });
+            return $flatten ? arrayUtil::flatten($ret) : $ret;
+        });
     }
    
     /**
      * 棋盘落库
+     * @param array $stonePosion 落点位置
+     * @return int
      */
-    public function save() {
+    public function save($stonePosion) {
         ksort($this->chessMap);
         $param = [
             'map'      => $this->chessMap,
             'pid'      => $this->root,
-            'position' => $this->stonePosion,
+            'position' => $stonePosion,
         ];
         return $this->carpetModel->saveMap($param);
     }
@@ -197,7 +207,7 @@ class chessMap {
         return $this;
     }
 
-        /**
+    /**
      * 获取签名
      */
     public function getSign() {

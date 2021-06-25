@@ -24,7 +24,7 @@ class chessMapsBuilder {
     //黑棋先手走天元
     public function __construct() {
         $middle = intval(CHESSBOARD_SIZE / 2);
-        //(new chessMap([], [$middle, $middle]))->save();
+        //(new chessMap([]))->save([$middle, $middle]);
         
         $this->carpetModel = new carpet();
     }
@@ -48,8 +48,9 @@ class chessMapsBuilder {
                 $mapWithWhite = (clone $map)->set($point, STONE_WHITE);
                 $blackChooise = chessboard::nextSteps($mapWithWhite->getChessMap());
                 $blackChooise = $this->chooiseFilter($mapWithWhite, $blackChooise, STONE_BLACK);
-                die;
-                print_r($blackChooise);die;
+
+                //黑棋选点落库
+                array_walk($blackChooise, [$map, 'save']);
             }
         }
     }
@@ -118,7 +119,7 @@ class chessMapsBuilder {
             $mapList = $this->carpetModel->getList($where);
             
             foreach ($mapList as $map) {
-                yield new chessMap($map['map'], null);
+                yield new chessMap($map['map'], $map['id']);
             }
             $this->point = $map['id'];
         } while ($mapList);

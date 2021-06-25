@@ -19,8 +19,13 @@ class preventAway extends base implements pruning {
      * @return bool 是否可落子
      */
     public function doCheck($map, $point, $color) {
-        print_r($point);
-        print_r($map);
-        echo $color;die;
+        $minePoints = $map->getChessMap($color, true);
+        $minDistance = INF;
+        foreach (array_keys($minePoints) as $myPoint) {
+            $distance = $point->distance(explode('.', $myPoint));
+            $minDistance = min($minDistance, $distance);
+        }
+
+        return $minDistance <= self::FARTHEST_DISTANCE;
     }
 }

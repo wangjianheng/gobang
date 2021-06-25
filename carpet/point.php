@@ -25,6 +25,14 @@ class point {
         $this->checkRes = [$res, $priority];
         return $this;
     }
+
+    /**
+     * 清空校验结果
+     */
+    public function clear() {
+        $this->checkRes = [null, null];
+        return $this;
+    }
     
     /**
      * 获取校验结果
@@ -38,6 +46,16 @@ class point {
      */
     public function position() {
         return [$this->abscissa, $this->ordinate];
+    }
+
+    /**
+     * 获取与另一个点的距离
+     * @param array $point 另一个点
+     */
+    public function distance($point) {
+        $point instanceof point && $point = $point->position();
+        $self = $this->position();
+        return pow($self[0] - $point[0], 2) + pow($self[1] - $point[1], 2);
     }
 
 

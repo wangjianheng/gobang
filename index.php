@@ -33,7 +33,7 @@ $whitePruings = [
     pruning\preventLink5::class => ['reverse' => true,  'priorityAdjust' => 0],
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 1],
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 0],
-    ];
+];
 app()->instance(WHITE_PRUINGS, array_map('app', array_keys($whitePruings), array_values($whitePruings)));
 
 //黑棋剪枝策略
@@ -43,7 +43,7 @@ $bluckPruings = [
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 1],
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 0],
     pruning\preventAway::class  => ['reverse' => false,  'priorityAdjust' => 0]
-    ];
+];
 app()->instance(BLACK_PRUINGS, array_map('app', array_keys($bluckPruings), array_values($bluckPruings)));
 
 
