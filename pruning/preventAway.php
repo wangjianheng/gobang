@@ -20,12 +20,27 @@ class preventAway extends base implements pruning {
      */
     public function doCheck($map, $point, $color) {
         $minePoints = $map->getChessMap($color, true);
+
+        //白棋第一个落点 可以围绕着黑棋下
+        if (empty($minePoints)) {
+            $middle = intval(CHESSBOARD_SIZE / 2);
+            $minePoints = [
+                "{$middle}.{$middle}" => true,
+            ];
+        }
+
         $minDistance = INF;
         foreach (array_keys($minePoints) as $myPoint) {
             $distance = $point->distance(explode('.', $myPoint));
             $minDistance = min($minDistance, $distance);
         }
 
-        return $minDistance <= self::FARTHEST_DISTANCE;
+        //黑棋第二个子最好挨着第一个子
+        $distanceLimitStretch = 0;
+        if ($color == STONE_BLACK && count($minePoints) == 1) {
+            $distanceLimitStretch = -8;
+        }
+
+        return $minDistance <= self::FARTHEST_DISTANCE + $distanceLimitStretch;
     }
 }

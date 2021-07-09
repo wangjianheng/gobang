@@ -11,6 +11,7 @@ define('STONE_WHITE', 2);
 define('WHITE_PRUINGS', 'white_pruings');
 define('BLACK_PRUINGS', 'black_pruings');
 define('CHESSBOARD_SIZE', 15);
+define('WIN_PRIORITY', 100);
 
 //调试
 $degug = false;
@@ -27,22 +28,25 @@ $resolver = app(DatabaseManager::class, ['app' => app(), 'factory' => $connectio
 
 Model::setConnectionResolver($resolver);
 
-//白棋剪枝策略
+/**
+ * 黑白棋剪枝策略
+ * 注意：胜利的优先级要高于100
+ */
 $whitePruings = [
     pruning\preventLink5::class => ['reverse' => false, 'priorityAdjust' => 1],
     pruning\preventLink5::class => ['reverse' => true,  'priorityAdjust' => 0],
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 1],
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 0],
+    pruning\preventAway::class  => ['reverse' => false,  'priorityAdjust' => 0],
 ];
 app()->instance(WHITE_PRUINGS, array_map('app', array_keys($whitePruings), array_values($whitePruings)));
 
-//黑棋剪枝策略
 $bluckPruings = [
     pruning\preventLink5::class => ['reverse' => false, 'priorityAdjust' => 1],
     pruning\preventLink5::class => ['reverse' => true,  'priorityAdjust' => 0],
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 1],
     pruning\preventLink4::class => ['reverse' => true,  'priorityAdjust' => 0],
-    pruning\preventAway::class  => ['reverse' => false,  'priorityAdjust' => 0]
+    pruning\preventAway::class  => ['reverse' => false,  'priorityAdjust' => 0],
 ];
 app()->instance(BLACK_PRUINGS, array_map('app', array_keys($bluckPruings), array_values($bluckPruings)));
 

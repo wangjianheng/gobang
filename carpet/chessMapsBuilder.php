@@ -1,10 +1,9 @@
 <?php
 namespace carpet;
-use carpet\chessMap;
-use carpet\point;
 use model\carpet;
 use tool\chessboard;
 use tool\arrayUtil;
+use \Illuminate\Support\Arr;
 
 /**
  * 构建地毯谱, 用广度优先
@@ -17,15 +16,15 @@ class chessMapsBuilder {
     const FEATCH_STEP = 100;
     
     //当前指针
-    protected $point = 0;
+    protected $point = 500;
     
     protected $carpetModel;
 
     //黑棋先手走天元
     public function __construct() {
         $middle = intval(CHESSBOARD_SIZE / 2);
-        //(new chessMap([]))->save([$middle, $middle]);
-        
+        //(new chessMap([]))->save(carpet::END_O, [[$middle, $middle]]);
+
         $this->carpetModel = new carpet();
     }
 
@@ -33,25 +32,59 @@ class chessMapsBuilder {
      * 开始构建
      */
     public function build() {
+        //非对称棋谱集合
+        $uniqueBySymmetry = [];
+
         foreach ($this->progressMaps() as $map) {
             /**
              * 下一手白棋出, 统计白棋所有可落子点
              * 经过筛选统计剩下的落子点
              */
             $whiteChooise = chessboard::nextSteps($map->getChessMap());
-            $whiteChooise = $this->chooiseFilter($map, $whiteChooise, STONE_WHITE);
+            $whiteChooisebak = $whiteChooise;
+            list($whiteChooise, $whitePriority) = $this->chooiseFilter($map, $whiteChooise, STONE_WHITE);
+
+            if (empty($whiteChooise)) {
+                print_r($map);
+                print_r($whiteChooisebak);
+                die;
+            }
             
             /**
              * 下一手黑棋出, 统计所有黑棋可能落点并落库
              */
             foreach ($whiteChooise as $point) {
                 $mapWithWhite = (clone $map)->set($point, STONE_WHITE);
+
+                //此时白棋已经赢了
+                if ($whitePriority > WIN_PRIORITY) {
+                    $mapWithWhite->save(carpet::END_F);
+                    continue;
+                }
+
                 $blackChooise = chessboard::nextSteps($mapWithWhite->getChessMap());
-                $blackChooise = $this->chooiseFilter($mapWithWhite, $blackChooise, STONE_BLACK);
+                list($blackChooise, $blackPriority) = $this->chooiseFilter($mapWithWhite, $blackChooise, STONE_BLACK);
+                $win = $blackPriority > WIN_PRIORITY ? carpet::END_W : carpet::END_O;
 
                 //黑棋选点落库
-                array_walk($blackChooise, [$map, 'save']);
+                //$mapWithWhite->save($win, $blackChooise);
             }
+        }
+    }
+
+    /**
+     * 是否存在对称的棋谱(这个会给后期计算也带来麻烦 暂时先不做了)
+     * @param array $map 棋谱
+     * @param array $uniqueBySymmetry 棋谱的集合
+     * @return boolean
+     */
+    protected function existsSymmetry($map, & $uniqueBySymmetry) {
+        /**
+         * 数量越多计算量越大 且出现对称的概率越小
+         * 只判断前几手就好了
+         */
+        if(count($map->getChessMap()) > 6) {
+            return false;
         }
     }
     
@@ -75,13 +108,14 @@ class chessMapsBuilder {
         }
         
         //选优先级最高的点
+        $priority = [];
         $chooiseFilter = [];
         foreach ($chooise as $point) {
             list($res, $priority) = $point->getCheckRespond();
             $res && $chooiseFilter[$priority][] = $point->position();
         }
         ksort($chooiseFilter);
-        return array_pop($chooiseFilter);
+        return [array_pop($chooiseFilter), $priority];
     }
 
     /**
@@ -119,7 +153,11 @@ class chessMapsBuilder {
             $mapList = $this->carpetModel->getList($where);
             
             foreach ($mapList as $map) {
-                yield new chessMap($map['map'], $map['id']);
+                foreach ($map['position'] as $position) {
+                    $currentMap = $map['map'];
+                    Arr::set($currentMap, $position, STONE_BLACK);
+                    yield new chessMap($currentMap, $map['id']);
+                }
             }
             $this->point = $map['id'];
         } while ($mapList);

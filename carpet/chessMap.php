@@ -21,14 +21,10 @@ class chessMap {
 
     protected $root;
 
-    protected $carpetModel;
-
     public function __construct($chessMap, $root = 0) {
         $this->chessMap = $chessMap;
         $this->sign = sha1(json_encode($chessMap));
         $this->root = $root;
-        
-        $this->carpetModel = new carpet();
     }
     
     /**
@@ -55,14 +51,18 @@ class chessMap {
      * @param array $stonePosion 落点位置
      * @return int
      */
-    public function save($stonePosion) {
+    public function save($win, $stonePosions = []) {
+        if (empty($stonePosions)) {
+            return ;
+        }
+
         ksort($this->chessMap);
         $param = [
             'map'      => $this->chessMap,
             'pid'      => $this->root,
-            'position' => $stonePosion,
+            'position' => $stonePosions,
         ];
-        return $this->carpetModel->saveMap($param);
+        return (new carpet())->saveMap($param, $win);
     }
     
     /*

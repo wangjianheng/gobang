@@ -6,7 +6,7 @@ namespace pruning;
  */
 class preventLink5 extends base implements pruning {
 
-    protected $priority = 100;
+    protected $priority = WIN_PRIORITY;
     
     /**
      * 校验当前落子是否通过

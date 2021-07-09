@@ -1,6 +1,8 @@
 <?php
 namespace pruning;
 
+use tool\arrayUtil;
+
 /**
  * 活四判断
  */

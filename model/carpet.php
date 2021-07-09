@@ -31,12 +31,16 @@ class carpet extends Model {
      * @param int $end
      */
     public function saveMap($param, $end = self::END_O) {
+        $param['position'] = array_map(function ($p) {
+            return join('.', $p);
+        }, $param['position']);
+
         $default = [
             'end'     => $end,
             'step'    => count($param['map']) + 1,
             'map'     => json_encode($param['map']),
             'maphash' => sha1(json_encode($param['map'])),
-            'position' => join('.', $param['position']),
+            'position' => join('|', $param['position']),
         ];
         $this->fill(array_merge($param, $default))->save();
         return $this->getKey();
@@ -57,7 +61,7 @@ class carpet extends Model {
                 ->map(function ($item) {
                     $item = $item->toArray();
                     $item['map'] = json_decode($item['map'], true);
-                    Arr::set($item['map'], $item['position'], STONE_BLACK);
+                    $item['position'] = explode('|', $item['position']);
                     return $item;
                 })
                 ->all();
